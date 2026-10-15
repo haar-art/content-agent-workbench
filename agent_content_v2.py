@@ -189,6 +189,19 @@ def save_script(result: dict) -> Path:
     # 5. 返回路径给调用方 —— 不返回，外面就没法知道存哪了
     return out_path
 
+def run_topic(topic: str) -> dict:
+    """给 Web 界面调用的入口：传入主题，返回完整脚本包。"""
+    ctx = ContextSession(BASE_DIR)
+    hook_strategy = step1_persona(ctx, topic)
+    angle_full = step2_research(ctx)
+    angle = angle_full.strip().splitlines()[0]
+    script_part = step3_script(ctx)
+    image_prompts = step4_image_prompts(ctx)
+    result = step5_assemble(topic, hook_strategy, angle, script_part, image_prompts)
+    save_script(result)
+    return result
+
+
     
 
 
