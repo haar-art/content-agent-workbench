@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>内容 Agent 工作台</title>
+<title>自媒体 Agent 工作台</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: "Microsoft YaHei", sans-serif; margin: 0; padding: 24px; background: #f7f8fa; color: #1f2328; }
@@ -23,9 +23,11 @@
   .field-head { display: flex; justify-content: space-between; margin-bottom: 6px; }
   .field-name { font-size: 13px; color: #6b7280; }
   .copy { font-size: 12px; color: #378add; cursor: pointer; }
-  .field-body { font-size: 14px; margin: 0; line-height: 1.6; }
+  .field-body { font-size: 14px; margin: 0; line-height: 1.6; white-space: pre-wrap; }
   .meta { font-size: 12px; color: #9ca3af; }
-  .hist { font-size: 13px; margin: 6px 0; color: #374151; }
+  .hist { font-size: 13px; margin: 6px 0; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hot-item { font-size: 13px; padding: 6px 0; color: #374151; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
+  .hot-item:hover { color: #185fa5; }
   .actions { display: flex; gap: 10px; margin-top: 14px; }
   .actions button { flex: 1; }
 </style>
@@ -35,11 +37,17 @@
   <h1>自媒体 Agent 工作台</h1>
   <p class="sub">输入一个主题 → 输出可直接拍摄的脚本包</p>
   <div class="grid">
+
     <div>
       <div class="card">
         <div class="row">
           <label>主题</label>
           <textarea placeholder="例如：一条命令误删了开发者 700GB 数据"></textarea>
+          <!-- ★ 三个热点按钮 + 列表容器（新增） -->
+          <button onclick="grabHot('aihot')" style="width:100%;margin-top:8px;">抓 AI 热点</button>
+          <button onclick="grabHot('news')" style="width:100%;margin-top:6px;">抓我的每日新闻</button>
+          <button onclick="grabHot('smart')" style="width:100%;margin-top:6px;">智能选题（AI 帮我筛）</button>
+          <div id="hot-list"></div>
         </div>
         <div class="row">
           <label>平台</label>
@@ -50,13 +58,15 @@
         </div>
         <button class="primary" onclick="testBtn()">生成脚本包</button>
       </div>
+
       <div class="card" style="margin-top:16px;">
         <label>历史记录</label>
-        <p class="hist">· 700GB 误删</p>
-        <p class="hist">· AI 写 PR 超人类</p>
-        <p class="hist" style="margin-bottom:0;">· 沙箱开了也不安全</p>
+        <div id="history-list">
+          <p class="hist">加载中…</p>
+        </div>
       </div>
     </div>
+
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
         <strong style="font-size:15px;">脚本包</strong>
@@ -64,36 +74,39 @@
       </div>
       <div class="field">
         <div class="field-head"><span class="field-name">标题</span><span class="copy">复制</span></div>
-        <p class="field-body" id="f-title">一条命令，删掉 700GB：我见过最贵的"手滑"</p>
+        <p class="field-body" id="f-title">等待生成…</p>
       </div>
       <div class="field">
         <div class="field-head"><span class="field-name">开头钩子</span><span class="copy">复制</span></div>
-        <p class="field-body" id="f-hook">删之前它只问了一句"确定吗"，你点了 y。</p>
+        <p class="field-body" id="f-hook">等待生成…</p>
       </div>
       <div class="field">
         <div class="field-head"><span class="field-name">正文口播稿</span><span class="copy">复制</span></div>
-        <p class="field-body" id="f-script">真事。一个开发者写错一条命令，700GB 数据当场蒸发……</p>
+        <p class="field-body" id="f-script">等待生成…</p>
       </div>
       <div class="field">
         <div class="field-head"><span class="field-name">配图提示词</span><span class="copy">复制</span></div>
-        <p class="field-body" id="f-image">深色终端界面，红色报错文字，进度条卡在 0%</p>
+        <p class="field-body" id="f-image">等待生成…</p>
       </div>
       <div class="field">
         <div class="field-head"><span class="field-name">话题标签</span><span class="copy">复制</span></div>
-        <p class="field-body" id="f-hashtags">#vibecoding #程序员翻车 #AI工具</p>
+        <p class="field-body" id="f-hashtags">等待生成…</p>
       </div>
       <div class="actions">
         <button>一键复制全部</button>
         <button>重新生成</button>
       </div>
     </div>
+
   </div>
 </div>
+
 <script>
+  /* ① 生成脚本包（原有） */
   function testBtn() {
-    const btn = document.querySelector('.primary');   // ← 新增：找到那个蓝色按钮
-    btn.textContent = '生成中…（约1分钟）';            // ← 新增：改按钮上的字
-    btn.disabled = true;                              // ← 新增：禁用（防止连点）
+    const btn = document.querySelector('.primary');
+    btn.textContent = '生成中…（约1分钟）';
+    btn.disabled = true;
 
     const topic = document.querySelector('textarea').value;
     fetch('/generate', {
@@ -108,10 +121,44 @@
         document.getElementById('f-script').textContent = data.script;
         document.getElementById('f-image').textContent = data.image_prompts[0];
         document.getElementById('f-hashtags').textContent = data.hashtags.join(' ');
-        btn.textContent = '生成脚本包';               // ← 新增：恢复了
-        btn.disabled = false;                         // ← 新增：重新可点
+        btn.textContent = '生成脚本包';
+        btn.disabled = false;
       });
   }
+
+  /* ② 热点抓取（新增：支持 aihot / news / smart 三源） */
+  function grabHot(source) {
+    const box = document.getElementById('hot-list');
+    box.innerHTML = '<p class="hist">' + (source === 'smart' ? 'AI 筛选中…（约20秒）' : '抓取中…') + '</p>';
+    fetch('/hot?source=' + source)
+      .then(res => res.json())
+      .then(items => {
+        if (!items.length) { box.innerHTML = '<p class="hist">没抓到</p>'; return; }
+        box.innerHTML = items.map(it => {
+          const t = it.topic || it;
+          const r = it.reason ? '<span style="color:#9ca3af;font-size:12px;"> — ' + it.reason + '</span>' : '';
+          return '<p class="hot-item" data-t="' + t.replace(/"/g, '&quot;') + '" onclick="pickTopic(this)">· ' + t + r + '</p>';
+        }).join('');
+      });
+  }
+
+  /* ③ 点热点 → 填进主题框（新增） */
+  function pickTopic(el) {
+    document.querySelector('textarea').value = el.dataset.t || el.textContent.replace(/^·\s*/, '');
+    document.getElementById('hot-list').innerHTML = '';
+  }
+
+  /* ④ 历史记录（原有） */
+  fetch('/history')
+    .then(res => res.json())
+    .then(items => {
+      const box = document.getElementById('history-list');
+      if (items.length === 0) {
+        box.innerHTML = '<p class="hist">还没有记录</p>';
+        return;
+      }
+      box.innerHTML = items.map(it => '<p class="hist">· ' + it.topic + '</p>').join('');
+    });
 </script>
 </body>
 </html>
